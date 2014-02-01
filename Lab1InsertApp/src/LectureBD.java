@@ -418,6 +418,9 @@ public class LectureBD {
 	   // On insere la personne dans la BD
 	   PreparedStatement preparedStatement = null;
 	   PreparedStatement preparedStatementAdresse = null;
+	   PreparedStatement preparedStatementCarteCredit = null;
+	   PreparedStatement preparedStatementForfait = null;
+	   PreparedStatement preparedStatementClient = null;
 	   
 		String insertTableSQL = "INSERT INTO UTILISATEUR"
 				+ "(nom, prenom, datedenaissance, motdepasse,) VALUES"
@@ -427,8 +430,23 @@ public class LectureBD {
 				+ "(rue, ville, province, codepostal) VALUES"
 				+ "(?,?,?,?)";
 
+		String insertTableSQLCarteCredit = "INSERT INTO CarteCredit"
+				+ "(typecarte, numero) VALUES"
+				+ "(?,?)";
+
+		String insertTableSQLForfait = "INSERT INTO Forfait"
+				+ "(nom) VALUES"
+				+ "(?)";
+		
+		String insertTableSQLClient = "INSERT INTO CLIENT"
+				+ "(clientid, adresseid, cartecreditid, forfaitid, courriel, numerotelephone) VALUES"
+				+ "(?,?,?,?,?,?)";
+		
 		try {
 			preparedStatement = conn.prepareStatement(insertTableSQL);
+			preparedStatementAdresse = conn.prepareStatement(insertTableSQLAdresse);
+			preparedStatementCarteCredit = conn.prepareStatement(insertTableSQLCarteCredit);
+			preparedStatementForfait = conn.prepareStatement(insertTableSQLForfait);
 			preparedStatementAdresse = conn.prepareStatement(insertTableSQLAdresse);
 			
 			
