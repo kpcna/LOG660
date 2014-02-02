@@ -4,7 +4,9 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -349,6 +351,7 @@ public class LectureBD {
    
    private void insertionPersonne(int id, String nom, String anniv, String lieu, String photo, String bio) 
    {      
+	   System.out.println("insertion personnes");
 	   // On insere la personne dans la BD
 	   PreparedStatement preparedStatement = null;
 	   
@@ -414,6 +417,12 @@ public class LectureBD {
                              int expMois, int expAnnee, String motDePasse,
                              String forfait) 
    {
+	   System.out.println(adresse);
+	   
+	   String numeroCivique = adresse.substring(0, adresse.indexOf(" "));
+	   String rue = adresse.substring(adresse.indexOf(" ") + 1, adresse.length());
+	   
+	   
       // On le client dans la BD
 	   // On insere la personne dans la BD
 	   PreparedStatement preparedStatement = null;
@@ -423,12 +432,12 @@ public class LectureBD {
 	   PreparedStatement preparedStatementClient = null;
 	   
 		String insertTableSQL = "INSERT INTO UTILISATEUR"
-				+ "(nom, prenom, datedenaissance, motdepasse,) VALUES"
+				+ "(nom, prenom, datedenaissance, motdepasse) VALUES"
 				+ "(?,?,?,?)";
 		
 		String insertTableSQLAdresse = "INSERT INTO ADRESSE"
-				+ "(rue, ville, province, codepostal) VALUES"
-				+ "(?,?,?,?)";
+				+ "(numerocivique, rue, ville, province, codepostal) VALUES"
+				+ "(?,?,?,?,?)";
 
 		String insertTableSQLCarteCredit = "INSERT INTO CarteCredit"
 				+ "(typecarte, numero) VALUES"
@@ -439,24 +448,27 @@ public class LectureBD {
 				+ "(?)";
 		
 		String insertTableSQLClient = "INSERT INTO CLIENT"
-				+ "(clientid, adresseid, cartecreditid, forfaitid, courriel, numerotelephone) VALUES"
-				+ "(?,?,?,?,?,?)";
+				+ "(clientid, adresseid, cartecreditid, forfaitid, utilisateurid, courriel, numerotelephone) VALUES"
+				+ "(?,?,?,?,?,?,?)";
 		
 		try {
-			preparedStatement = conn.prepareStatement(insertTableSQL);
-			preparedStatementAdresse = conn.prepareStatement(insertTableSQLAdresse);
-			preparedStatementCarteCredit = conn.prepareStatement(insertTableSQLCarteCredit);
-			preparedStatementForfait = conn.prepareStatement(insertTableSQLForfait);
-			preparedStatementAdresse = conn.prepareStatement(insertTableSQLAdresse);
+			preparedStatement = conn.prepareStatement(insertTableSQL, Statement.RETURN_GENERATED_KEYS);
+			preparedStatementAdresse = conn.prepareStatement(insertTableSQLAdresse, Statement.RETURN_GENERATED_KEYS);
+			preparedStatementCarteCredit = conn.prepareStatement(insertTableSQLCarteCredit, Statement.RETURN_GENERATED_KEYS);
+			preparedStatementForfait = conn.prepareStatement(insertTableSQLForfait, Statement.RETURN_GENERATED_KEYS);
+			preparedStatementClient = conn.prepareStatement(insertTableSQLAdresse, Statement.RETURN_GENERATED_KEYS);
 			
 			
-			preparedStatementAdresse.setString(1, adresse);
-			preparedStatementAdresse.setString(2, ville);
-			preparedStatementAdresse.setString(3, province);
-			preparedStatementAdresse.setString(4,codePostal);			
+			preparedStatementAdresse.setString(1, numeroCivique);
+			preparedStatementAdresse.setString(2, rue);
+			preparedStatementAdresse.setString(3, ville);
+			preparedStatementAdresse.setString(4, province);
+			preparedStatementAdresse.setString(5,codePostal);			
 			
 			// execute insert SQL stetement
 			preparedStatementAdresse.executeUpdate();
+			
+			System.out.println("Record is inserted into Adresse table!");
 						
 			
 			SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
@@ -474,6 +486,40 @@ public class LectureBD {
 			System.out.println("Record is inserted into Utilisateur table!");
 	
 			// preparedStatementAdresse.getGeneratedKeys().first() INTO CLIENT.ADRESSEID
+			
+			preparedStatementCarteCredit.setString(1, carte);
+			preparedStatementCarteCredit.setString(2, noCarte);		
+			
+			// execute insert SQL stetement
+			preparedStatementCarteCredit.executeUpdate();
+			
+			System.out.println("Record is inserted into CarteCredit table!");
+			
+			preparedStatementForfait.setString(1, forfait);	
+			
+			// execute insert SQL stetement
+			preparedStatementForfait.executeUpdate();
+			
+			System.out.println("Record is inserted into Forfait table!");
+			
+			ResultSet generatedKeys = null;
+			
+			preparedStatementClient.setInt(1, id);
+			
+			if(preparedStatementAdresse.getGeneratedKeys().next())					
+				preparedStatementClient.setInt(2, preparedStatementAdresse.getGeneratedKeys().getInt(1));
+			
+			System.out.println(preparedStatementCarteCredit.getGeneratedKeys().getInt(1));
+			preparedStatementClient.setInt(3, preparedStatementCarteCredit.getGeneratedKeys().getInt(1));
+			preparedStatementClient.setInt(4, preparedStatementForfait.getGeneratedKeys().getInt(1));
+			preparedStatementClient.setInt(5, preparedStatement.getGeneratedKeys().getInt(1));
+			preparedStatementClient.setString(6, courriel);
+			preparedStatementClient.setString(7, tel);	
+			
+			// execute insert SQL stetement
+			preparedStatementClient.executeUpdate();
+			
+			System.out.println("Record is inserted into Client table!");
 
 		} catch (Exception e) 
 		{
@@ -485,6 +531,10 @@ public class LectureBD {
 			if (preparedStatement != null) {
 				try {
 					preparedStatement.close();
+					preparedStatementAdresse.close();
+					preparedStatementClient.close();
+					preparedStatementForfait.close();
+					preparedStatementCarteCredit.close();
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -508,8 +558,8 @@ public class LectureBD {
    public static void main(String[] args) {
       LectureBD lecture = new LectureBD();
       
-      lecture.lecturePersonnes(args[0]);
-      lecture.lectureFilms(args[1]);
+      //lecture.lecturePersonnes(args[0]);
+      //lecture.lectureFilms(args[1]);
       lecture.lectureClients(args[2]);
    }
 }
