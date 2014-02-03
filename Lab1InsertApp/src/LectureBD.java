@@ -407,8 +407,49 @@ public class LectureBD {
                            ArrayList<String> genres, String realisateurNom, int realisateurId,
                            ArrayList<String> scenaristes,
                            ArrayList<Role> roles, String poster,
-                           ArrayList<String> annonces) {         
+                           ArrayList<String> annonces) 
+   {         
       // On le film dans la BD
+	  
+	   PreparedStatement preparedStatement = null;
+	   
+	   String insertTableSQL = "INSERT INTO FILM"
+				+ "(filmid, titre, anneesortie, resumefilm) VALUES"
+				+ "(?,?,?,?)";	
+		
+		try 
+		{	
+			preparedStatement = conn.prepareStatement(insertTableSQL);
+			
+			preparedStatement.setInt(1, id);
+			preparedStatement.setString(2, titre);
+			preparedStatement.setInt(3, annee);
+			preparedStatement.setString(4, resume);			
+
+			// execute insert SQL stetement
+			preparedStatement.executeUpdate();
+
+			System.out.println("Record is inserted into film table!");
+			
+		} 
+		catch (Exception e) 
+		{
+
+			System.out.println(e.getMessage());
+
+		} 
+		finally {
+
+			if (preparedStatement != null) {
+				try {
+					preparedStatement.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+
 	         
    }
    
