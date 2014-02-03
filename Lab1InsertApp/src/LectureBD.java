@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
@@ -408,6 +409,7 @@ public class LectureBD {
                            ArrayList<Role> roles, String poster,
                            ArrayList<String> annonces) {         
       // On le film dans la BD
+	         
    }
    
    private void insertionClient(int id, String nomFamille, String prenom,
@@ -417,6 +419,10 @@ public class LectureBD {
                              int expMois, int expAnnee, String motDePasse,
                              String forfait) 
    {
+	   
+	   int forfaitId = -1;
+	   Statement stmt = null;
+		 
 	   System.out.println(adresse);
 	   
 	   String numeroCivique = adresse.substring(0, adresse.indexOf(" "));
@@ -452,11 +458,12 @@ public class LectureBD {
 				+ "(?,?,?,?,?,?,?)";
 		
 		try {
-			preparedStatement = conn.prepareStatement(insertTableSQL, Statement.RETURN_GENERATED_KEYS);
-			preparedStatementAdresse = conn.prepareStatement(insertTableSQLAdresse, Statement.RETURN_GENERATED_KEYS);
-			preparedStatementCarteCredit = conn.prepareStatement(insertTableSQLCarteCredit, Statement.RETURN_GENERATED_KEYS);
-			preparedStatementForfait = conn.prepareStatement(insertTableSQLForfait, Statement.RETURN_GENERATED_KEYS);
-			preparedStatementClient = conn.prepareStatement(insertTableSQLAdresse, Statement.RETURN_GENERATED_KEYS);
+			
+			preparedStatement = conn.prepareStatement(insertTableSQL, new String[]{"utilisateurId"});
+			preparedStatementAdresse = conn.prepareStatement(insertTableSQLAdresse, new String[]{"adresseId"});
+			preparedStatementCarteCredit = conn.prepareStatement(insertTableSQLCarteCredit, new String[]{"carteCreditId"});
+			preparedStatementForfait = conn.prepareStatement(insertTableSQLForfait, new String[]{"forfaitId"});
+			preparedStatementClient = conn.prepareStatement(insertTableSQLClient);
 			
 			
 			preparedStatementAdresse.setString(1, numeroCivique);
@@ -494,25 +501,73 @@ public class LectureBD {
 			preparedStatementCarteCredit.executeUpdate();
 			
 			System.out.println("Record is inserted into CarteCredit table!");
+
 			
-			preparedStatementForfait.setString(1, forfait);	
+			stmt = conn.createStatement();
+			String sql = "SELECT forfaitid FROM forfait WHERE nom='" + forfait
+					+ "'";
+			ResultSet rs = stmt.executeQuery(sql);
+			ResultSet generatedKeys;
+
+			while (rs.next()) 
+			{
+				// Retrieve by column name
+				forfaitId = rs.getInt("forfaitid");
+			}
+
+
+			rs.close();
 			
-			// execute insert SQL stetement
-			preparedStatementForfait.executeUpdate();
+			if(forfaitId == -1)
+			{
+				preparedStatementForfait.setString(1, forfait);	
+				
+				// execute insert SQL stetement
+				preparedStatementForfait.executeUpdate();
+
+				generatedKeys = preparedStatementForfait.getGeneratedKeys();
+				if (null != generatedKeys && generatedKeys.next()) 
+				{
+					forfaitId = generatedKeys.getInt(1);
+				}
+			}
 			
+			// Display values
+			System.out.print("Forfait id: " + forfaitId);		
+
+
 			System.out.println("Record is inserted into Forfait table!");
+		
 			
-			ResultSet generatedKeys = null;
+			System.out.println(id);
+			int idUtilisateur = -1;
+			generatedKeys = preparedStatement.getGeneratedKeys();
+			if (null != generatedKeys && generatedKeys.next()) 
+			{
+			     idUtilisateur = generatedKeys.getInt(1);
+			}
+			System.out.println(idUtilisateur);			
 			
+			int idAdresse = -1;
+			generatedKeys = preparedStatementAdresse.getGeneratedKeys();
+			if (null != generatedKeys && generatedKeys.next()) 
+			{
+			     idAdresse = generatedKeys.getInt(1);
+			}
+			
+			System.out.println(idAdresse);
+			int idCarteCredit = -1;
+			generatedKeys = preparedStatementCarteCredit.getGeneratedKeys();
+			if (null != generatedKeys && generatedKeys.next()) 
+			{
+				idCarteCredit = generatedKeys.getInt(1);
+			}
+
 			preparedStatementClient.setInt(1, id);
-			
-			if(preparedStatementAdresse.getGeneratedKeys().next())					
-				preparedStatementClient.setInt(2, preparedStatementAdresse.getGeneratedKeys().getInt(1));
-			
-			System.out.println(preparedStatementCarteCredit.getGeneratedKeys().getInt(1));
-			preparedStatementClient.setInt(3, preparedStatementCarteCredit.getGeneratedKeys().getInt(1));
-			preparedStatementClient.setInt(4, preparedStatementForfait.getGeneratedKeys().getInt(1));
-			preparedStatementClient.setInt(5, preparedStatement.getGeneratedKeys().getInt(1));
+			preparedStatementClient.setInt(2, idAdresse);
+			preparedStatementClient.setInt(3, idCarteCredit);
+			preparedStatementClient.setInt(4, forfaitId);
+			preparedStatementClient.setInt(5, idUtilisateur);
 			preparedStatementClient.setString(6, courriel);
 			preparedStatementClient.setString(7, tel);	
 			
@@ -531,10 +586,53 @@ public class LectureBD {
 			if (preparedStatement != null) {
 				try {
 					preparedStatement.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			if (preparedStatementAdresse != null) {
+				try {
 					preparedStatementAdresse.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			if (preparedStatementClient != null) {
+				try {
 					preparedStatementClient.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					System.out.println("Client prepared statement ");
+					e.printStackTrace();
+				}
+			}
+			
+			if (preparedStatementForfait != null) {
+				try {
 					preparedStatementForfait.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			if (preparedStatementCarteCredit != null) {
+				try {
 					preparedStatementCarteCredit.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			
+			if (stmt != null) {
+				try {
+					stmt.close();
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -558,7 +656,7 @@ public class LectureBD {
    public static void main(String[] args) {
       LectureBD lecture = new LectureBD();
       
-      //lecture.lecturePersonnes(args[0]);
+      lecture.lecturePersonnes(args[0]);
       //lecture.lectureFilms(args[1]);
       lecture.lectureClients(args[2]);
    }
