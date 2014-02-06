@@ -412,15 +412,59 @@ public class LectureBD {
       // On le film dans la BD
 	  
 	   PreparedStatement preparedStatement = null;
+	   PreparedStatement preparedStatementPays = null;
+	   PreparedStatement preparedStatementFilmLanguesOriginales = null;
+	   PreparedStatement preparedStatementFilmPaysProduction = null;
+	   PreparedStatement preparedStatementFilmGenres = null;
+	   
+	   ArrayList<Integer> IdsPays = new ArrayList<Integer>();
+	   ArrayList<Integer> IdsGenres = new ArrayList<Integer>();
+	   ArrayList<Integer> IdsScenaristes = new ArrayList<Integer>();
+	   
 	   
 	   String insertTableSQL = "INSERT INTO FILM"
 				+ "(filmid, titre, anneesortie, resumefilm) VALUES"
 				+ "(?,?,?,?)";	
+	   
+	   String insertTableSQLPays = "INSERT INTO Pays"
+				+ "(nom) VALUES"
+				+ "(?)";	
+	   
+	   String insertTableSQLGenres = "INSERT INTO GENRE"
+				+ "(nom) VALUES"
+				+ "(?)";	
+	   
+	   String insertTableSQLFilmLanguesOriginales = "INSERT INTO FILMLANGUESORIGINALES"
+				+ "(filmid, langueid) VALUES"
+				+ "(?,?)";
+	   
+	   String insertTableSQLFilmPaysProduction = "INSERT INTO FILMPAYSPRODUCTION"
+				+ "(filmid, paysid) VALUES"
+				+ "(?,?)";
+	   
+	   String insertTableSQLFilmGenres = "INSERT INTO FILMGENRES"
+				+ "(filmid, genreid) VALUES"
+				+ "(?,?)";
+	   
+	   String insertTableSQLPersonne = "INSERT INTO FILM"
+				+ "(filmid, titre, anneesortie, resumefilm) VALUES"
+				+ "(?,?,?,?)";	
+	   
+	   String insertTableSQLPersonnage = "INSERT INTO FILM"
+				+ "(filmid, titre, anneesortie, resumefilm) VALUES"
+				+ "(?,?,?,?)";
+	   
 		
 		try 
 		{	
+			int IdFilm = -1;
 			preparedStatement = conn.prepareStatement(insertTableSQL);
+			preparedStatementPays = conn.prepareStatement(insertTableSQLPays, new String[]{"paysId"});
+			preparedStatementFilmLanguesOriginales = conn.prepareStatement(insertTableSQLPays, new String[]{"filmLangueId"});
+			preparedStatementFilmPaysProduction = conn.prepareStatement(insertTableSQLPays, new String[]{"filmPaysProductionId"});
+			preparedStatementFilmGenres = conn.prepareStatement(insertTableSQLFilmGenres, new String[]{"filmGenresId"});
 			
+			// ---- FILM -----
 			preparedStatement.setInt(1, id);
 			preparedStatement.setString(2, titre);
 			preparedStatement.setInt(3, annee);
@@ -428,8 +472,46 @@ public class LectureBD {
 
 			// execute insert SQL stetement
 			preparedStatement.executeUpdate();
+			
+			ResultSet generatedKeys;
+			generatedKeys = preparedStatement.getGeneratedKeys();
+			if (null != generatedKeys && generatedKeys.next()) 
+			{
+				IdFilm = generatedKeys.getInt(1);
+			}
+			
+			int Id;
 
 			System.out.println("Record is inserted into film table!");
+			
+
+			IdsPays = InsertArrayItemsIntoDB(pays,"paysId","pays","nom");
+			IdsGenres = InsertArrayItemsIntoDB(genres,"genreId","genre","nom");
+			
+			// ---- FilmLanguesOriginales -----		
+
+			
+			// ---- FilmPaysProduction -----
+			
+			for(Integer item : IdsPays)
+			{
+				preparedStatementFilmPaysProduction.setInt(1, IdFilm);
+				preparedStatementFilmPaysProduction.setInt(2, item);
+
+				// execute insert SQL stetement
+				preparedStatementFilmPaysProduction.executeUpdate();			
+			}
+			
+			// ---- FilmGenres -----	
+			
+			for(Integer item : IdsGenres)
+			{
+				preparedStatementFilmGenres.setInt(1, IdFilm);
+				preparedStatementFilmGenres.setInt(2, item);
+
+				// execute insert SQL stetement
+				preparedStatementFilmGenres.executeUpdate();			
+			}
 			
 		} 
 		catch (Exception e) 
@@ -451,6 +533,89 @@ public class LectureBD {
 		}
 
 	         
+   }
+   
+   private ArrayList<Integer> InsertArrayItemsIntoDB(ArrayList<String> items,String champ, String table, String champComparer)
+   {
+	   String insertTableSQL = "INSERT INTO " + table
+				+ "(" + champComparer + ") VALUES"
+				+ "(?)";	
+	   
+	   PreparedStatement preparedStatement = null;
+	   
+	   ArrayList<Integer> Ids = new ArrayList<Integer>();
+	   	   
+	   try 
+	   {
+		   
+	   int Id = -1;
+	   
+		for(String item : items)
+		{
+			Id = verifyIfRecordExists(champ,table,champComparer,item);
+			
+			if(Id == -1)
+			{
+				preparedStatement = conn.prepareStatement(insertTableSQL, new String[]{champ});
+				
+				preparedStatement.setString(1, item);
+
+				preparedStatement.executeUpdate();
+				
+				ResultSet generatedKeys;
+				generatedKeys = preparedStatement.getGeneratedKeys();
+				if (null != generatedKeys && generatedKeys.next()) 
+				{
+					Id = generatedKeys.getInt(1);
+				}
+			}
+			
+			if(Id != -1)
+				Ids.add(Id);
+
+		}
+		
+		} catch (SQLException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return Ids; 
+		
+   }
+   
+   private int verifyIfRecordExists(String champ, String table, String champComparer, String AComparer)
+   {
+	   int Id = -1;
+	   Statement stmt = null;
+	   
+		try 
+		{
+			stmt = conn.createStatement();
+			
+			String sql = "SELECT " + champ + " FROM " + table + " WHERE " + champComparer + " ='" + AComparer + "'";
+			ResultSet rs = stmt.executeQuery(sql);
+			ResultSet generatedKeys;
+
+			while (rs.next()) 
+			{
+				// Retrieve by column name
+				Id = rs.getInt(champ);
+			}
+
+
+			rs.close();
+			
+		} catch (SQLException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		
+		return Id;
+		
    }
    
    private void insertionClient(int id, String nomFamille, String prenom,
@@ -698,7 +863,7 @@ public class LectureBD {
       LectureBD lecture = new LectureBD();
       
       lecture.lecturePersonnes(args[0]);
-      //lecture.lectureFilms(args[1]);
+      lecture.lectureFilms(args[1]);
       lecture.lectureClients(args[2]);
    }
 }
